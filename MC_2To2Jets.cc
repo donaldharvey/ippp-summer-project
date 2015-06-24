@@ -3,6 +3,8 @@
 #include "Rivet/Projections/FinalState.hh"
 #include "Rivet/Projections/FastJets.hh"
 
+
+
 namespace Rivet {
   /// @brief MC validation analysis for jet events
   class MC_2To2Jets : public Analysis {
@@ -10,7 +12,9 @@ namespace Rivet {
 
     MC_2To2Jets()
       : Analysis("MC_2To2Jets")
-    {    }
+    {  
+      setNeedsCrossSection(true);
+    }
 
 
   public:
@@ -20,32 +24,63 @@ namespace Rivet {
       FastJets jetpro(fs, FastJets::ANTIKT, 0.4);
       addProjection(jetpro, "Jets");
 
-      _histDY_12 = bookHisto1D("DY_12", 100, 0, 100);
-      _histDPhi_12 = bookHisto1D("DPhi_12", 100, 0, TWOPI);
-
+      for (unsigned long i=0;i<3;++i) {
+        const double pTmax = 1.0/(double(i)+2.0) * sqrtS()/GeV/2.0;
+        const unsigned long nbins_pT = 100/(i+1);
+        const string pTname = "Jet_" + to_str(i+1) + "_p_T";
+        MSG_DEBUG("pTmax = " << pTmax);
+        MSG_DEBUG("nBins_pT = " << nbins_pT);
+        MSG_DEBUG("pTname = " << pTname);
+        
+        _histJetP_T.push_back(bookHisto1D(pTname, logspace(nbins_pT, 10.0, pTmax)));
+        for (unsigned long j=i+1;j<3;++j) {
+          const std::pair<int, int> ij = std::make_pair(i, j);
+          _histInterJetDeltaEta.insert(make_pair(ij, bookHisto1D(
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaEta", 100, 0, 10
+          )));
+          _histInterJetDeltaPhi.insert(make_pair(ij, bookHisto1D(
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaPhi", 100, 0, M_PI
+          )));
+          _histInterJetDeltaR.insert(make_pair(ij, bookHisto1D(
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaR", 100, 0, 15
+          )));
+        }
+      }
     }
 
 
     void analyze(const Event& event) {
       const double weight = event.weight();
       const Jets jets = applyProjection<FastJets>(event, "Jets").jetsByPt(0*GeV);
-      const double dy_12 = jets[0].pseudorapidity() - jets[1].pseudorapidity();
-      const double dPhi_12 = jets[0].phi() - jets[1].phi();
-      _histDY_12->fill(dy_12, weight);
-      _histDPhi_12->fill(dPhi_12, weight);
-
+      for (unsigned long i=0;i<3;i++) {
+        if (jets.size() < i+1) continue;
+        _histJetP_T[i]->fill(jets[i].pt());
+        for (unsigned long j=i+1;j<3;++j) {
+          const std::pair<int, int> ij = std::make_pair(i, j);
+          _histInterJetDeltaEta[ij]->fill(jets[i].pseudorapidity() - jets[j].pseudorapidity(), weight);
+          _histInterJetDeltaPhi[ij]->fill(deltaPhi(jets[i].momentum(), jets[j].momentum()), weight);
+          _histInterJetDeltaR[ij]->fill(deltaR(jets[i].momentum(), jets[j].momentum()), weight);
+        }
+      }
     }
 
 
     void finalize() {
-      normalize(_histDY_12);
-      normalize(_histDPhi_12);
+      for (unsigned long i=0;i<3;i++) {
+        normalize(_histJetP_T[i]);
+      }
+      // Scale the d{eta,phi,R} histograms
+      typedef map<pair<int, int>, Histo1DPtr> HistMap;
+      foreach (HistMap::value_type& it, _histInterJetDeltaEta) scale(it.second, crossSection()/sumOfWeights());
+      foreach (HistMap::value_type& it, _histInterJetDeltaPhi) scale(it.second, crossSection()/sumOfWeights());
+      foreach (HistMap::value_type& it, _histInterJetDeltaR) scale(it.second, crossSection()/sumOfWeights());
     }
 
   private:
-    Histo1DPtr _histDY_12;
-    Histo1DPtr _histDPhi_12;
-
+    std::map<std::pair<int, int>, Histo1DPtr> _histInterJetDeltaEta;
+    std::map<std::pair<int, int>, Histo1DPtr> _histInterJetDeltaPhi;
+    std::map<std::pair<int, int>, Histo1DPtr> _histInterJetDeltaR;
+    std::vector<Histo1DPtr> _histJetP_T;
   };
 
 
