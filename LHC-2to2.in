@@ -17,12 +17,13 @@ set LHCGenerator:MaxErrors 10000
 ##################################################
 
 # Intrinsic pT tune extrapolated to LHC energy
-set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.2*GeV
+set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.34*GeV
+# NOTE: This tune of the intrinsic pT is an extrapolation to 7 TeV.
 
 ########################
-## sqrt(s) = 8000 GeV ##
+## sqrt(s) = 7000 GeV ##
 ########################
-set LHCGenerator:EventHandler:LuminosityFunction:Energy 8000.0
+set LHCGenerator:EventHandler:LuminosityFunction:Energy 7000.0
 
 ##################################################
 # Matrix Elements for hadron-hadron collisions 
@@ -134,7 +135,7 @@ cd /Herwig/Generators
 
 # A HepMC dump file (requires --with-hepmc to be set at configure time)
 insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
-set /Herwig/Analysis/HepMCFile:PrintEvent 10000
+set /Herwig/Analysis/HepMCFile:PrintEvent 100000
 set /Herwig/Analysis/HepMCFile:Format GenEvent
 set /Herwig/Analysis/HepMCFile:Units GeV_mm
 
