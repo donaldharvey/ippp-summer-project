@@ -30,6 +30,7 @@ set LHCGenerator:EventHandler:LuminosityFunction:Energy 7000.0
 # (by default only gamma/Z switched on)
 ##################################################
 cd /Herwig/MatrixElements/
+set /Herwig/Cuts/JetKtCut:MinKT 100.0*GeV
 
 #
 #  Electroweak boson W/Z processes
@@ -86,7 +87,6 @@ insert SimpleQCD:MatrixElements[0] MEQCD2to2
 # insert SimpleQCD:MatrixElements[0] MEHiggs
 # insert SimpleQCD:MatrixElements[0] MEHiggsJet
 # set MEHiggsJet:Process qqbar
-# set /Herwig/Cuts/JetKtCut:MinKT 0.0*GeV
 #
 # higgs+jet
 # insert SimpleQCD:MatrixElements[0] MEHiggsJet
@@ -135,7 +135,7 @@ cd /Herwig/Generators
 
 # A HepMC dump file (requires --with-hepmc to be set at configure time)
 insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
-set /Herwig/Analysis/HepMCFile:PrintEvent 100000
+set /Herwig/Analysis/HepMCFile:PrintEvent 10000
 set /Herwig/Analysis/HepMCFile:Format GenEvent
 set /Herwig/Analysis/HepMCFile:Units GeV_mm
 

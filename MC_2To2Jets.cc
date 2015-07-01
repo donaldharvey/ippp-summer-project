@@ -11,7 +11,7 @@
 #define PT1_CUT 100*GeV
 
 // |eta_1|, |eta_2| <= 2.5
-#define ETA_CUT 2.5*GeV
+#define ETA_CUT 2.5
 
 // M_12 > 220 GeV
 #define M_CUT 220*GeV
@@ -20,18 +20,23 @@
 #define R_23_CUT_MIN 0.5
 #define R_23_CUT_MAX 1.5
 
-
 namespace Rivet {
+  double calculateDeltaPhi(const Jet& jet1, const Jet& jet2) {
+    return jet1.pseudojet().delta_phi_to(jet2.pseudojet());
+  }
   double calculateBeta(const Jets& jets) {
     const double deltaEta = jets[2].pseudorapidity() - jets[1].pseudorapidity();
-    const double dPhi = deltaPhi(jets[2].momentum(), jets[1].momentum());
+    const double dPhi = calculateDeltaPhi(jets[2].momentum(), jets[1].momentum());
     if (deltaEta == 0) {
       return HALFPI;
     }
     if (dPhi == 0) {
       return deltaEta > 0 ? 0 : PI;
     }
-    return atan(abs(dPhi) / deltaEta);
+    return atan2(std::abs(dPhi), deltaEta);
+  }
+  double calculateDeltaR(const Jet& jet1, const Jet& jet2) {
+    return jet1.pseudojet().delta_R(jet2.pseudojet());
   }
   /// @brief MC validation analysis for jet events
   class MC_2To2Jets : public Analysis {
@@ -52,27 +57,29 @@ namespace Rivet {
       FastJets jetpro(fs, FastJets::ANTIKT, 0.5);
       addProjection(jetpro, "Jets");
       _histNumJets = bookHisto1D("NumJets", 5, 3, 5);
-      _histDeltaEta23Central = bookHisto1D("DeltaEta23Central", 100, -2, 2);
-      _histDeltaEta23Forward = bookHisto1D("DeltaEta23Forward", 100, -2, 2);
-      _histBetaCentral = bookHisto1D("BetaCentral", 100, 0, PI);
-      _histBetaForward = bookHisto1D("BetaForward", 100, 0, PI);
+      _histDeltaPhi23Central = bookHisto1D("DeltaPhi23Central", 50, -2, 2);
+      _histDeltaPhi23Forward = bookHisto1D("DeltaPhi23Forward", 50, -2, 2);
+      _histDeltaEta23Central = bookHisto1D("DeltaEta23Central", 50, -2, 2);
+      _histDeltaEta23Forward = bookHisto1D("DeltaEta23Forward", 50, -2, 2);
+      _histBetaCentral = bookHisto1D("BetaCentral", 50, 0, PI);
+      _histBetaForward = bookHisto1D("BetaForward", 50, 0, PI);
 
       for (unsigned long i=0;i<3;++i) {
         const double pTmax = 1.0/(double(i)+2.0) * sqrtS()/GeV/2.0;
         const unsigned long nbins_pT = 100/(i+1);
         const string pTname = "Jet_" + to_str(i+1) + "_p_T";
         
-        _histJetP_T.push_back(bookHisto1D(pTname, logspace(nbins_pT, 10.0, pTmax)));
+        _histJetP_T.push_back(bookHisto1D(pTname, 50, 0, 700));
         for (unsigned long j=i+1;j<3;++j) {
           const std::pair<int, int> ij = std::make_pair(i, j);
           _histInterJetDeltaEta.insert(make_pair(ij, bookHisto1D(
-            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaEta", 100, -2, 2
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaEta", 50, -5, 5
           )));
           _histInterJetDeltaPhi.insert(make_pair(ij, bookHisto1D(
-            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaPhi", 100, -M_PI, M_PI
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaPhi", 50, -PI, PI
           )));
           _histInterJetDeltaR.insert(make_pair(ij, bookHisto1D(
-            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaR", 100, 0, 15
+            "Jet_" + to_str(i+1) + to_str(j+1) + "_DeltaR", 100, 0, 6
           )));
         }
       }
@@ -91,7 +98,7 @@ namespace Rivet {
         MSG_DEBUG("Vetoing: first jet has insufficient pt.");
         vetoEvent;
       }
-      if(abs(jets[0].pseudorapidity()) > ETA_CUT or abs(jets[1].pseudorapidity()) > ETA_CUT) {
+      if(std::abs(jets[0].pseudorapidity()) > ETA_CUT or std::abs(jets[1].pseudorapidity()) > ETA_CUT) {
         MSG_DEBUG("Vetoing: pseudorapidities too large.");
         vetoEvent;
       }
@@ -99,8 +106,8 @@ namespace Rivet {
         MSG_DEBUG("Vetoing: insufficient mass.");
         vetoEvent;
       }
-      double deltaR23 = deltaR(jets[1].momentum(), jets[2].momentum());
-      if(deltaR23 >= 1.5 or deltaR23 <= 0.5) {
+      double deltaR23 = calculateDeltaR(jets[1], jets[2]);
+      if(deltaR23 >= R_23_CUT_MAX or deltaR23 <= R_23_CUT_MIN) {
         MSG_DEBUG("Vetoing: deltaR23 not in correct range.");
         vetoEvent;
       }
@@ -112,38 +119,45 @@ namespace Rivet {
         for (unsigned long j=i+1;j<3;++j) {
           const std::pair<int, int> ij = std::make_pair(i, j);
           double deltaEta = sign(jets[i].pseudorapidity()) * (jets[j].pseudorapidity() - jets[i].pseudorapidity());
+
           _histInterJetDeltaEta[ij]->fill(deltaEta, weight);
           if (i == 1 and j == 2) {
+            // fill the 23 histograms, separating on eta2
             double eta2 = jets[i].pseudorapidity();
-            if (abs(eta2) > 0.8) {
+            MSG_DEBUG("Got deltaEta of " << deltaEta);
+            if (std::abs(eta2) > 0.8) {
               _histDeltaEta23Forward->fill(deltaEta, weight);
               _histBetaForward->fill(calculateBeta(jets), weight);
+              _histDeltaPhi23Forward->fill(calculateDeltaPhi(jets[j], jets[i]), weight);
             }
             else {
               _histDeltaEta23Central->fill(deltaEta, weight);
               _histBetaCentral->fill(calculateBeta(jets), weight);
+              _histDeltaPhi23Central->fill(calculateDeltaPhi(jets[j], jets[i]), weight);
             }
           }
-          _histInterJetDeltaPhi[ij]->fill(deltaPhi(jets[j].momentum(), jets[i].momentum()), weight);
-          _histInterJetDeltaR[ij]->fill(deltaR(jets[j].momentum(), jets[i].momentum()), weight);
+          _histInterJetDeltaPhi[ij]->fill(calculateDeltaPhi(jets[j], jets[i]), weight);
+          _histInterJetDeltaR[ij]->fill(calculateDeltaR(jets[j], jets[i]), weight);
         }
       }
     }
 
 
     void finalize() {
-      MSG_DEBUG("Got " << cutEventCount << "unvetoed events.");
+      MSG_DEBUG("Got " << cutEventCount << " unvetoed events.");
       for (unsigned long i=0;i<3;i++) {
         normalize(_histJetP_T[i]);
       }
       normalize(_histNumJets);
       // Scale the d{eta,phi,R} histograms
       typedef map<pair<int, int>, Histo1DPtr> HistMap;
-      foreach (HistMap::value_type& it, _histInterJetDeltaEta) scale(it.second, crossSection()/sumOfWeights());
-      foreach (HistMap::value_type& it, _histInterJetDeltaPhi) scale(it.second, crossSection()/sumOfWeights());
-      foreach (HistMap::value_type& it, _histInterJetDeltaR) scale(it.second, crossSection()/sumOfWeights());
-      scale(_histDeltaEta23Central, crossSection()/sumOfWeights());
-      scale(_histDeltaEta23Forward, crossSection()/sumOfWeights());
+      foreach (HistMap::value_type& it, _histInterJetDeltaEta) normalize(it.second);
+      foreach (HistMap::value_type& it, _histInterJetDeltaPhi) normalize(it.second);
+      foreach (HistMap::value_type& it, _histInterJetDeltaR) normalize(it.second);
+      normalize(_histDeltaEta23Central);
+      normalize(_histDeltaEta23Forward);
+      normalize(_histDeltaPhi23Central);
+      normalize(_histDeltaPhi23Forward);
     }
 
   private:
@@ -154,6 +168,8 @@ namespace Rivet {
     Histo1DPtr _histNumJets;
     Histo1DPtr _histDeltaEta23Central;
     Histo1DPtr _histDeltaEta23Forward;
+    Histo1DPtr _histDeltaPhi23Central;
+    Histo1DPtr _histDeltaPhi23Forward;
     Histo1DPtr _histBetaCentral;
     Histo1DPtr _histBetaForward;
     unsigned long cutEventCount;
