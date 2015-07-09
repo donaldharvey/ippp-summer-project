@@ -14,7 +14,7 @@
 #define MAX_VBF_DELTAPHI 2.5
 #define MIN_VBF_DELTAETA 4.8
 #define MIN_VBF_INVT_MASS 1*TeV
-
+// add jet cut - max eta 4.8ish!
 namespace Rivet {
   double calculateDeltaPhi(const Jet& jet1, const Jet& jet2) {
     return std::abs(jet1.pseudojet().delta_phi_to(jet2.pseudojet()));

@@ -1,6 +1,7 @@
 // -*- C++ -*-
 #include "Rivet/Analyses/MC_JetAnalysis.hh"
 #include "Rivet/Projections/FinalState.hh"
+#include "Rivet/Projections/VetoedFinalState.hh"
 #include "Rivet/Projections/FastJets.hh"
 
 // Cuts:
@@ -53,7 +54,8 @@ namespace Rivet {
 
     void init() {
       cutEventCount = 0;
-      FinalState fs;
+      VetoedFinalState fs;
+      fs.addVetoID(PID::HIGGS);
       FastJets jetpro(fs, FastJets::ANTIKT, 0.5);
       addProjection(jetpro, "Jets");
       _histNumJets = bookHisto1D("NumJets", 5, 3, 5);
