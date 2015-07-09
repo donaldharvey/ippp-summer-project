@@ -32,7 +32,7 @@ set Factory:OrderInAlphaEW 2
 
 ## Select the process
 ## You may use identifiers such as p, pbar, j, l, mu+, h0 etc.
-do Factory:Process p p -> e+ e-
+do Factory:Process p p -> j j h0
 
 ## Special settings required for on-shell production of unstable particles
 ## enable for on-shell top production
@@ -52,7 +52,7 @@ do Factory:Process p p -> e+ e-
 # read Matchbox/MadGraph-NJet.in
 # read Matchbox/MadGraph-OpenLoops.in
 # read Matchbox/HJets.in
-# read Matchbox/VBFNLO.in
+read Matchbox/VBFNLO.in
 
 ## Uncomment this to use ggh effective couplings
 ## currently only supported by MadGraph-GoSam
@@ -144,6 +144,11 @@ read Matchbox/MMHT2014.in
 ##################################################
 
 do /Herwig/MatrixElements/Matchbox/Factory:ProductionMode
+
+insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
+set /Herwig/Analysis/HepMCFile:PrintEvent 1000000000
+set /Herwig/Analysis/HepMCFile:Format GenEvent
+set /Herwig/Analysis/HepMCFile:Units GeV_mm
 
 cd /Herwig/Generators
 saverun LHC-Matchbox EventGenerator
