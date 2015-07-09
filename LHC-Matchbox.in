@@ -44,6 +44,8 @@ do Factory:Process p p -> j j h0
 ## Matrix element library selection
 ##################################################
 
+cd /Herwig
+
 ## Select a generic tree/loop combination or a
 ## specialized NLO package
 
