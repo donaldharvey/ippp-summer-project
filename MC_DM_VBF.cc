@@ -81,8 +81,8 @@ namespace Rivet {
         MSG_INFO("Leading jet delta eta too small");
         vetoEvent;
       }
-      if (signbit(jets[0].pseudorapidity()) * signbit(jets[1].pseudorapidity()) != 0) {
-        MSG_INFO("Not in oppposite hemispheres:" << signbit(jets[0].pseudorapidity()) * signbit(jets[1].pseudorapidity()));
+      if (std::signbit(jets[0].pseudorapidity()) * std::signbit(jets[1].pseudorapidity()) != 0) {
+        MSG_INFO("Not in oppposite hemispheres:" << std::signbit(jets[0].pseudorapidity()) * std::signbit(jets[1].pseudorapidity()));
         vetoEvent;
       }
       // if ((jets[0].pseudojet() + jets[1].pseudojet()).m() < MIN_VBF_INVT_MASS) {
